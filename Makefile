@@ -3,7 +3,7 @@
 #define variables so it is easier to make changes
 CC=gcc
 CFLAGS=-g -Wall -std=c99
-TARGETS=ex-factorial & catalan
+TARGETS=ex-factorial catalan
 
 all: $(TARGETS)
 

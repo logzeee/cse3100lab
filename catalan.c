@@ -11,7 +11,11 @@ long catalan_number(int n)
     if (n < 0)
         return 0;
 
-    // TODO
+    if (n == 0)
+        return 1;
+    
+    long prev = catalan_number(n - 1);
+    return prev * (4L * n - 2) / (n + 1);
 }
 
 /* do not change main function */
