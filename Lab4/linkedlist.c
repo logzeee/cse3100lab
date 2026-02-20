@@ -106,8 +106,36 @@ void print_list_details(node *head) {
 // functions that have not been implemented
 
 node *delete_node(node *head, int v) {
-  // TODO
-  error_message(ERR_NODELETE);
+  // Remove the first node whose value equals v and return the
+  // (possibly new) head pointer.  If the value isn't found, print
+  // an error message and return the original head.
+  if (head == NULL) {
+    error_message(ERR_NOTFOUND);
+    return head;
+  }
+
+  // Special case: deleting the head node.
+  if (head->v == v) {
+    node *next = head->next;
+    free(head);
+    return next;
+  }
+
+  node *prev = head;
+  node *curr = head->next;
+
+  while (curr != NULL) {
+    if (curr->v == v) {
+      prev->next = curr->next;
+      free(curr);
+      return head;
+    }
+    prev = curr;
+    curr = curr->next;
+  }
+
+  // not found
+  error_message(ERR_NOTFOUND);
   return head;
 }
 
@@ -119,8 +147,20 @@ node *delete_node(node *head, int v) {
  * Return value is a pointer to the new head node.
  */
 node *reverse_list(node *head) {
-  // TODO
-  error_message(ERR_NOREVERSE);
-  return head;
+  // Reverse the list in-place by redirecting next pointers.
+  // Use three-pointer technique: prev, curr, next.
+  node *prev = NULL;
+  node *curr = head;
+  node *next = NULL;
+
+  while (curr != NULL) {
+    next = curr->next;   // save next
+    curr->next = prev;   // reverse link
+    prev = curr;         // advance prev
+    curr = next;         // advance curr
+  }
+
+  // prev is new head (last non-NULL node)
+  return prev;
 
 }
