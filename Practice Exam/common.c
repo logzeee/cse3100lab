@@ -12,13 +12,27 @@ void commonChars(char arr[][MAX_LEN], int n) {
   }
 
   for (int i = 0; i < n; i++) {
+    int seen[26];
+    for (int j = 0; j < 26; j++)
+      seen[j] = false;
 
-    // fill code here
+    for (int j = 0; j < strlen(arr[i]); j++)
+      seen[arr[i][j] - 'a'] = true;
+
+    for (int j = 0; j < 26; j++)
+      if (!seen[j])
+        common[j] = false;
   }
 
   printf("Common characters: ");
 
-  // fill code here
+  bool found = false;
+  for (int i = 0; i < 26; i++) {
+    if (common[i]) {
+      printf("%c ", 'a' + i);
+      found = true;
+    }
+  }
   if (!found) {
     printf("None");
   }
