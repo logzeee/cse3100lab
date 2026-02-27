@@ -1,5 +1,3 @@
-//Do not modify starter code
-//You may add helper functions if needed
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -39,12 +37,45 @@ void printList(Node *head) {
   printf("\n");
 }
 
-
-void zipList(Node **headRef) {
-
-  for (Node *slow = *headRef, *fast = *headRef; fast && fast->next; slow = slow->next, fast = fast->next->next) {
+// Reverse a linked list
+Node *reverseList(Node *head) {
+  Node *prev = NULL;
+  while (head) {
+    Node *next = head->next;
+    head->next = prev;
+    prev = head;
+    head = next;
   }
+  return prev;
+}
+
+// Zip a single linked list
+void zipList(Node **headRef) {
+  if (!*headRef || !(*headRef)->next)
+    return;
+
+  // Find middle
+  Node *t1 = *headRef, *t2 = *headRef;
+  while (t2->next && t2->next->next) {
+    t1 = t1->next;
+    t2 = t2->next->next;
+  }
+	// reverse
+  Node *second = reverseList(t1->next);
+  t1->next = NULL;
 	
+	// merge
+  Node *first = *headRef;
+  while (second) {
+    Node *tmp1 = first->next;
+    Node *tmp2 = second->next;
+
+    first->next = second;
+    second->next = tmp1;
+
+    first = tmp1;
+    second = tmp2;
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -56,7 +87,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 1; i < argc; i++) {
-    int val = atoi(argv[i]);
+    int val = atoi(argv[i]); 
     insertEnd(&head, val);
   }
 
@@ -67,8 +98,14 @@ int main(int argc, char *argv[]) {
 
   printf("Zipped list:\n");
   printList(head);
- 
-	// fill code here
+
+	Node *temp; 	
+  while (head) { 
+    temp = head; 
+    head = head->next; 
+    free(temp); 
+  }
+
 
   return 0;
 }
