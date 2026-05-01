@@ -1,0 +1,95 @@
+================================================================================
+   THREADS / SYNC — THE "ALWAYS DO THIS" RULES
+   (read this once the night before; everything else is a variation)
+================================================================================
+
+THREAD LIFECYCLE
+  - ALWAYS pthread_create(&t, NULL, fn, arg) and pair with pthread_join.
+  - The thread function MUST be `void *fn(void *arg)` — no other shape.
+  - DO NOT pass &i from inside a loop; give each thread its own slot
+    (e.g. id[i]) or you'll race on the loop variable's address.
+  - Compile with `-lpthread`.
+
+MUTEX
+  - ALWAYS init before use: PTHREAD_MUTEX_INITIALIZER (static)
+                            or pthread_mutex_init(&m, NULL).
+  - ALWAYS unlock on every code path; don't return while holding it.
+  - HOLD IT for the SHORTEST time possible. No I/O, no sleep, no long
+    computations inside the critical section.
+  - Two locks? Always acquire in the SAME ORDER everywhere -> no deadlock.
+  - Destroy with pthread_mutex_destroy(&m) when fully done.
+
+CONDITION VARIABLE  (this is the part the exam loves)
+  - ALWAYS hold the mutex BEFORE calling pthread_cond_wait.
+  - ALWAYS wait inside `while (!predicate)`, NEVER `if`.
+        while (!ready)
+            pthread_cond_wait(&cv, &m);
+    Reasons: spurious wakeups are legal; another thread may have grabbed
+    the resource between signal and you getting the lock back.
+  - cond_wait atomically: UNLOCKS the mutex, sleeps, then RE-LOCKS it
+    before returning. You wake up holding the lock again.
+  - Update the shared state INSIDE the lock, THEN signal/broadcast.
+  - signal     wakes ONE waiter      — use when only one can proceed
+    broadcast  wakes ALL waiters     — use when many can, or for shutdown
+  - SIGNALS ARE NOT REMEMBERED. If nobody is waiting, the signal is lost.
+    That's fine because the predicate guards correctness, not the signal.
+  - Destroy with pthread_cond_destroy(&cv) when fully done.
+
+PRODUCER / CONSUMER (the canonical skeleton — memorize this)
+
+  producer:                              consumer:
+    LOCK(m);                               LOCK(m);
+    while (FULL)                           while (EMPTY)
+        WAIT(cv_p, m);                         WAIT(cv_c, m);
+    put item;                              take item;
+    SIGNAL(cv_c);                          SIGNAL(cv_p);
+    UNLOCK(m);                             UNLOCK(m);
+
+  Variations:
+    - Many producers/consumers? Use a CIRCULAR buffer + `count` and
+      consider BROADCAST on shutdown so blocked threads can exit.
+    - Buffer size 1? Use a bool `has_item` instead of a counter.
+
+RWLOCK
+  - Many readers OR one writer.
+  - rdlock for reads, wrlock for writes, ONE unlock for both.
+  - A reader cannot "upgrade" to a writer — release first.
+  - Use this only when reads dominate writes.
+
+BARRIER
+  - "Everyone wait here until N arrive, then all go together."
+  - Init with the COUNT of threads that must arrive.
+  - Each thread calls pthread_barrier_wait(&b) at the sync point.
+  - Reusable across phases — the barrier resets after each release.
+  - Compile/run on the class server (Linux); macOS doesn't ship it.
+
+INIT / DESTROY MAP
+
+  pthread_mutex_t   PTHREAD_MUTEX_INITIALIZER     pthread_mutex_init/destroy
+  pthread_cond_t    PTHREAD_COND_INITIALIZER      pthread_cond_init/destroy
+  pthread_rwlock_t  PTHREAD_RWLOCK_INITIALIZER    pthread_rwlock_init/destroy
+  pthread_barrier_t (no static init)              pthread_barrier_init/destroy
+
+WHEN THINGS GO WRONG — QUICK DIAGNOSIS
+
+  Hangs forever               ->  forgot an unlock, or two locks taken in
+                                  opposite orders (deadlock), or signaled
+                                  before anyone was waiting + condition not
+                                  pre-set.
+  Wrong / racy answers        ->  shared variable touched outside the lock,
+                                  or used `if` instead of `while` around
+                                  cond_wait.
+  Crashes inside pthread_*    ->  used a destroyed/uninitialized object,
+                                  or freed memory holding a sync object.
+  Threads "miss" work         ->  used signal() when many waiters could
+                                  proceed; switch to broadcast().
+  Consumer never exits        ->  no shutdown signal; on "done", set a
+                                  shared flag and broadcast the cond vars.
+
+================================================================================
+ONE-LINE MENTAL MODEL
+  mutex   = "only me right now"
+  cond    = "wake me when X is true"   (always with a mutex, always in `while`)
+  rwlock  = "many readers, one writer"
+  barrier = "everyone meet me here"
+================================================================================
